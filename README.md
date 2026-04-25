@@ -31,6 +31,29 @@ Taxis_NY/
 └── tests/            # Tests unitarios
 ```
 
+## Ingesta de datos
+
+Script para descargar parquets mensuales de la TLC a `data/raw/`:
+
+```bash
+# Un mes concreto del dataset yellow (por defecto)
+python -m src.data.download_tlc --year-months 2025-01
+
+# Varios meses sueltos
+python -m src.data.download_tlc --year-months 2024-01 2024-06 2025-01
+
+# Año completo
+python -m src.data.download_tlc --years 2024
+
+# Combinar años y meses (producto cartesiano)
+python -m src.data.download_tlc --years 2023 2024 --months 1 2 3
+
+# Otro dataset (yellow | green | fhv | fhvhv)
+python -m src.data.download_tlc --dataset green --years 2024 --months 1
+```
+
+Opciones extra: `--force` para redescargar aunque el fichero ya exista. Si un mes no está disponible en el servidor, el script lo reporta y continúa con el resto.
+
 ## Estado
 
-En desarrollo inicial — estructura del proyecto creada.
+En desarrollo inicial — estructura del proyecto e ingesta de datos TLC.
