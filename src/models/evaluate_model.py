@@ -122,16 +122,25 @@ def main():
     print('EVALUACIÓN COMPREHENSIVA DEL MODELO')
     print('='*70)
 
-    # Cargar datos
+    # Cargar datos (try combined first, fallback to original)
     print('\n[load] cargando datos procesados...')
-    df = pd.read_parquet('data/processed/yellow_taxi_features.parquet')
+    try:
+        df = pd.read_parquet('data/processed/yellow_taxi_features_combined.parquet')
+        print('  datos: Yellow + FHVHV (2023-2025)')
+    except:
+        df = pd.read_parquet('data/processed/yellow_taxi_features.parquet')
+        print('  datos: Yellow only (2024-2025)')
     print(f'  total: {len(df):,} registros')
     print(f'  rango: {df["pickup_datetime"].min()} a {df["pickup_datetime"].max()}')
 
-    # Cargar modelo
+    # Cargar modelo (try combined first, fallback to original)
     print('\n[load] cargando modelo entrenado...')
-    model = joblib.load('models/linear_model.joblib')
-    print(f'  modelo: Linear Regression')
+    try:
+        model = joblib.load('models/linear_model_combined.joblib')
+        print(f'  modelo: Linear Regression (COMBINED Yellow+FHVHV)')
+    except:
+        model = joblib.load('models/linear_model.joblib')
+        print(f'  modelo: Linear Regression (Yellow only)')
 
     # Features
     feature_cols = [
