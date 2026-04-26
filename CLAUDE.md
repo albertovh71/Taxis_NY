@@ -126,10 +126,21 @@ La TLC publica varios datasets de viajes en `https://d37ci6vzurychx.cloudfront.n
 - Antes de commitear cualquier cosa que toque `data/` o `models/`, comprobar que `.gitignore` lo excluye correctamente.
 - No commitear `.claude/` (configuración local de Claude Code).
 
+## Decisiones de arquitectura
+
+### Definidas
+
+- **Granularidad temporal:** hora (en lugar de 15 min). Trade-off: menos ruido y más estable operacionalmente; las decisiones de despacho operan a escala horaria.
+- **Datasets TLC:** Yellow + FHVHV combinados. Refleja mejor la realidad actual de NYC (Yellow tradicional + Uber/Lyft de volumen alto). Requiere estandarización de schemas en la limpieza.
+- **Rango temporal:** últimos 24 meses (desde hace 2 años hasta hoy). Balance entre volumen suficiente y relevancia (post-COVID es más estable).
+- **Métrica principal:** MAPE por zona. Interpretable ("error 10%"), sensible a errores grandes, y refleja lo que importa operacionalmente en zonas de baja demanda.
+
+### Para fase 2 (después del baseline)
+
+- **Fuentes externas:** clima (Meteostat/NOAA), festivos US, eventos NYC. Primero asegurar un baseline sólido solo con datos TLC; las externas son mejoras iterativas.
+
 ## Decisiones pendientes
 
-- Granularidad temporal del target (hora vs 15 min).
-- Conjunto de datasets TLC a usar (solo yellow, o combinar con fhvhv).
-- Rango temporal de entrenamiento.
-- Fuentes externas a integrar (clima vía Meteostat/NOAA, festivos US, eventos NYC).
-- Métrica principal de evaluación (MAE, RMSE, MAPE por zona).
+- Estrategia de validación (time-series split, walk-forward, etc.).
+- Horizonte de predicción (1 hora adelante, 24 horas, etc.).
+- Estrategia de deployment (batch diario, serving en tiempo real, etc.).
