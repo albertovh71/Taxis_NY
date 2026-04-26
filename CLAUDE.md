@@ -2,7 +2,7 @@
 
 Contexto persistente del proyecto para Claude Code. Se carga automáticamente en cada sesión.
 
-## Resumen
+## Resumen AVi ha estado aqui
 
 Proyecto de Machine Learning para **predecir la demanda de taxis en Nueva York** por zona y franja horaria, usando datos históricos de la TLC (Taxi & Limousine Commission) y, más adelante, fuentes externas (clima, festivos, eventos).
 
