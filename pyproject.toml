@@ -1,0 +1,39 @@
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.venv
+  | \.git
+  | data
+  | models
+  | notebooks
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    ".venv",
+    "data",
+    "models",
+    "notebooks",
+]
+
+[tool.ruff.lint]
+# Reglas activas:
+#   E, W  -> errores y warnings de pycodestyle (PEP 8)
+#   F     -> pyflakes (variables sin usar, imports rotos, etc.)
+#   I     -> isort (orden de imports)
+#   UP    -> pyupgrade (sintaxis moderna de Python)
+#   B     -> flake8-bugbear (bugs y antipatrones comunes)
+#   SIM   -> flake8-simplify (simplificaciones)
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    "E501",  # line-too-long: black ya gestiona la longitud
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]

@@ -76,3 +76,9 @@ mlartifacts/
 # Logs
 *.log
 logs/
+
+# Claude Code local settings
+.claude/
+
+# Streamlit local config
+.streamlit/
