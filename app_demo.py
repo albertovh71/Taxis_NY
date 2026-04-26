@@ -49,12 +49,18 @@ def load_data():
         model = joblib.load('models/linear_model_combined.joblib')
         history = pd.read_parquet('data/processed/history_recent_combined.parquet')
         zones = pd.read_csv('data/external/taxi_zone_lookup.csv')
-        history['pickup_datetime'] = pd.to_datetime(history['pickup_datetime'])
-        return model, history, zones, None
-    except Exception as e:
-        return None, None, None, str(e)
 
-model, history_df, zones_df, error = load_data()
+        # Cargar datos completos para comparación real vs predicción
+        features = pd.read_parquet('data/processed/yellow_taxi_features_combined.parquet')
+
+        history['pickup_datetime'] = pd.to_datetime(history['pickup_datetime'])
+        features['pickup_datetime'] = pd.to_datetime(features['pickup_datetime'])
+
+        return model, history, zones, features, None
+    except Exception as e:
+        return None, None, None, None, str(e)
+
+model, history_df, zones_df, features_df, error = load_data()
 
 if model is None:
     st.error(f"Error: {error}")
@@ -88,6 +94,21 @@ for _, row in zones_df.iterrows():
     borough = row['Borough']
     zones_dict[f"{zone_id:3d} - {zone_name} ({borough})"] = zone_id
 
+# FECHA
+st.sidebar.subheader("Fecha")
+min_date = features_df['pickup_datetime'].min().date()
+max_date = features_df['pickup_datetime'].max().date()
+future_date = max_date + pd.Timedelta(days=365)
+
+target_date = st.sidebar.date_input(
+    "Selecciona la fecha",
+    value=max_date,
+    min_value=min_date,
+    max_value=future_date,
+    help=f"Rango: {min_date} a {future_date.date()}"
+)
+
+# ZONA
 st.sidebar.subheader("Zona")
 zone_label = st.sidebar.selectbox(
     "Selecciona una zona",
@@ -96,6 +117,7 @@ zone_label = st.sidebar.selectbox(
 )
 zone_id = zones_dict[zone_label]
 
+# HORA
 st.sidebar.subheader("Hora")
 target_hour = st.sidebar.slider(
     "Selecciona la hora del dia",
@@ -105,12 +127,17 @@ target_hour = st.sidebar.slider(
     format="%02d:00"
 )
 
+# MODO
 st.sidebar.subheader("Modo")
 view_mode = st.sidebar.radio(
     "Tipo de visualizacion",
     options=["Prediccion Individual", "Proximas 24 Horas"],
     index=0
 )
+
+# Determinar si es fecha histórica o futura
+target_dt = pd.Timestamp(year=target_date.year, month=target_date.month, day=target_date.day, hour=target_hour)
+is_historical = target_dt <= pd.Timestamp(max_date)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
@@ -125,7 +152,18 @@ st.sidebar.markdown("""
 # CÁLCULOS
 # ============================================================================
 
-target_dt = pd.Timestamp(year=2025, month=1, day=15, hour=target_hour)
+# Obtener predicción
+pred = predict_demand(zone_id, target_dt, history_df, model)
+
+# Obtener dato real si existe
+real_value = None
+if is_historical:
+    real_data = features_df[
+        (features_df['pickup_datetime'] == target_dt) &
+        (features_df['PULocationID'] == zone_id)
+    ]
+    if not real_data.empty:
+        real_value = real_data.iloc[0]['trip_count']
 
 # ============================================================================
 # VISTA 1: INDIVIDUAL
@@ -135,7 +173,8 @@ if view_mode == "Prediccion Individual":
 
     zone_info = zones_df[zones_df['LocationID'] == zone_id].iloc[0]
 
-    st.markdown(f"### Prediccion - {zone_label}")
+    status_label = "Histórico" if is_historical else "Futuro"
+    st.markdown(f"### {status_label} - {zone_label}")
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -144,12 +183,53 @@ if view_mode == "Prediccion Individual":
     with col2:
         st.metric("Barrio", zone_info['Borough'])
     with col3:
-        st.metric("Hora", f"{target_hour:02d}:00")
+        st.metric("Fecha/Hora", f"{target_date.strftime('%d/%m %H:%M')}")
     with col4:
-        pred = predict_demand(zone_id, target_dt, history_df, model)
-        st.metric("Demanda", f"{pred:.1f}", delta="viajes/h", delta_color="off")
+        if is_historical and real_value is not None:
+            st.metric("Real", f"{real_value:.1f}", delta="viajes/h", delta_color="off")
+        else:
+            st.metric("Estado", "Futuro", help="Fecha sin datos reales")
 
     st.markdown("---")
+
+    # Comparación Real vs Predicción (si es histórico)
+    if is_historical and real_value is not None:
+        st.markdown("### Comparacion Real vs Prediccion")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.markdown(f"""
+            <div class='stat-card'>
+                <strong>Dato Real</strong><br><br>
+                <span style='color: #00cc00; font-size: 1.8em;'>{real_value:.1f}</span><br>
+                <span style='color: #b0b0b0;'>viajes/hora</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f"""
+            <div class='stat-card'>
+                <strong>Prediccion</strong><br><br>
+                <span style='color: #0066cc; font-size: 1.8em;'>{pred:.1f}</span><br>
+                <span style='color: #b0b0b0;'>viajes/hora</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            error_abs = abs(real_value - pred)
+            error_pct = (error_abs / (real_value + 0.001)) * 100
+            color = "#ff6600" if error_pct > 10 else "#ffaa00" if error_pct > 5 else "#00cc00"
+            st.markdown(f"""
+            <div class='stat-card'>
+                <strong>Error</strong><br><br>
+                <span style='color: {color}; font-size: 1.6em;'>{error_pct:.1f}%</span><br>
+                <span style='color: #b0b0b0;'>({error_abs:.1f} viajes)</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("---")
+
     st.markdown("### Analisis de Precision")
 
     col1, col2, col3 = st.columns(3)
@@ -159,8 +239,8 @@ if view_mode == "Prediccion Individual":
         upper = pred * 1.2
         st.markdown(f"""
         <div class='info-card'>
-            <strong>Intervalo de Confianza (±20%)</strong><br><br>
-            <span style='font-size: 1.8em;'>{lower:.1f} - {upper:.1f}</span><br>
+            <strong>Prediccion</strong><br><br>
+            <span style='font-size: 1.8em;'>{pred:.1f}</span><br>
             <span>viajes/hora</span>
         </div>
         """, unsafe_allow_html=True)
@@ -168,8 +248,8 @@ if view_mode == "Prediccion Individual":
     with col2:
         st.markdown(f"""
         <div class='stat-card'>
-            <strong>Precision</strong><br><br>
-            <span style='color: #0066cc; font-size: 1.6em;'>MAE: 0.264</span><br>
+            <strong>Intervalo ±20%</strong><br><br>
+            <span style='color: #0066cc; font-size: 1.4em;'>{lower:.1f} - {upper:.1f}</span><br>
             <span style='color: #b0b0b0;'>viajes/hora</span>
         </div>
         """, unsafe_allow_html=True)
@@ -177,9 +257,9 @@ if view_mode == "Prediccion Individual":
     with col3:
         st.markdown(f"""
         <div class='stat-card'>
-            <strong>Ajuste (R²)</strong><br><br>
-            <span style='color: #0066cc; font-size: 1.6em;'>0.9999</span><br>
-            <span style='color: #b0b0b0;'>Excelente</span>
+            <strong>Precision (MAE)</strong><br><br>
+            <span style='color: #0066cc; font-size: 1.6em;'>0.264</span><br>
+            <span style='color: #b0b0b0;'>viajes/hora</span>
         </div>
         """, unsafe_allow_html=True)
 
