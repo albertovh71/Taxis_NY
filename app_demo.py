@@ -98,14 +98,15 @@ for _, row in zones_df.iterrows():
 st.sidebar.subheader("Fecha")
 min_date = features_df['pickup_datetime'].min().date()
 max_date = features_df['pickup_datetime'].max().date()
-future_date = max_date + pd.Timedelta(days=365)
+future_date = pd.Timestamp(max_date) + pd.Timedelta(days=365)
+future_date = future_date.date()
 
 target_date = st.sidebar.date_input(
     "Selecciona la fecha",
     value=max_date,
     min_value=min_date,
     max_value=future_date,
-    help=f"Rango: {min_date} a {future_date.date()}"
+    help=f"Rango: {min_date} a {future_date}"
 )
 
 # ZONA
