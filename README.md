@@ -54,6 +54,37 @@ python -m src.data.download_tlc --dataset green --years 2024 --months 1
 
 Opciones extra: `--force` para redescargar aunque el fichero ya exista. Si un mes no está disponible en el servidor, el script lo reporta y continúa con el resto.
 
-## Estado
+## Version 1.0.0 - ✅ COMPLETADA
+
+**Modelo entrenado y listo para uso**
+
+### Incluye:
+- ✅ Modelo Linear Regression entrenado (Yellow + FHVHV 2023-2025)
+- ✅ App Streamlit con selector de fecha/zona/hora
+- ✅ Comparación real vs predicción para datos históricos
+- ✅ Scripts de evaluación y testing
+- ✅ Pipeline automatizado de ingesta → procesamiento → entrenamiento
+
+### Resultados del Modelo
+
+| Métrica | Valor |
+|---------|-------|
+| Dataset | Yellow + FHVHV (2023-2025) |
+| Muestras | 6.9M registros hora-zona |
+| MAE Test | 0.264 viajes/hora |
+| RMSE Test | 0.541 viajes/hora |
+| MAPE Test | 5.66% |
+| R² | 0.9999 |
+
+### Uso Rápido
+
+```bash
+# Ejecutar app web
+streamlit run app_demo.py
+
+# Acceder a http://localhost:8501
+```
+
+## Estado Anterior
 
 En desarrollo inicial — estructura del proyecto e ingesta de datos TLC.
