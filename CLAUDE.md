@@ -132,15 +132,38 @@ La TLC publica varios datasets de viajes en `https://d37ci6vzurychx.cloudfront.n
 
 - **Granularidad temporal:** hora (en lugar de 15 min). Trade-off: menos ruido y más estable operacionalmente; las decisiones de despacho operan a escala horaria.
 - **Datasets TLC:** Yellow + FHVHV combinados. Refleja mejor la realidad actual de NYC (Yellow tradicional + Uber/Lyft de volumen alto). Requiere estandarización de schemas en la limpieza.
-- **Rango temporal:** últimos 24 meses (desde hace 2 años hasta hoy). Balance entre volumen suficiente y relevancia (post-COVID es más estable).
+- **Rango temporal:** 2023-2025 (3 años completos). Volumen mayor (~6.9M muestras hora-zona), mejor representación de patrones estacionales e impactos post-COVID.
 - **Métrica principal:** MAPE por zona. Interpretable ("error 10%"), sensible a errores grandes, y refleja lo que importa operacionalmente en zonas de baja demanda.
+- **Modelo seleccionado:** Linear Regression. MAE 0.26 en test (mejor que XGBoost). Rápido, interpretable, sin overfitting.
 
 ### Para fase 2 (después del baseline)
 
 - **Fuentes externas:** clima (Meteostat/NOAA), festivos US, eventos NYC. Primero asegurar un baseline sólido solo con datos TLC; las externas son mejoras iterativas.
+
+## Resultados del Modelo (Yellow + FHVHV 2023-2025)
+
+**Dataset:** 6.9M muestras (3.4M Yellow + 2.9M FHVHV), 263 zonas, 3 años completos  
+**Split:** Train 2023-2024 (4.6M), Test 2025 (1.9M)  
+**Modelo:** Linear Regression
+
+| Métrica | Train | Test | Status |
+|---------|-------|------|--------|
+| MAE | 0.6017 viajes | 0.2643 viajes | ✓ Test mejor |
+| RMSE | 4.7591 viajes | 0.5410 viajes | ✓ Reducción 88% |
+| MAPE | 3.01% | 5.66% | ⚠ +2.6 pp |
+| R² | 0.9988 | 0.9999 | ✓ Excelente |
+
+**Análisis por zona:**
+- Mejores: zona 48 (MAPE 0.81%, demanda 134/h), zona 100 (MAPE 1%, demanda 78/h)
+- Peores: zona 44 (MAPE 16.92%, demanda <0.01/h), zonas de baja demanda
+
+**Análisis por hora:**
+- Mejor rendimiento: 7:00-8:00 (MAPE ~5%), horas pico matutinas
+- Peor rendimiento: 0:00-4:00 (MAPE ~6-7%), madrugada con menos volumen
 
 ## Decisiones pendientes
 
 - Estrategia de validación (time-series split, walk-forward, etc.).
 - Horizonte de predicción (1 hora adelante, 24 horas, etc.).
 - Estrategia de deployment (batch diario, serving en tiempo real, etc.).
+- Planes para fase 2 (fuentes externas, ajustes por zona especial).
